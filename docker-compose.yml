@@ -1,0 +1,72 @@
+version: "3.9"
+
+services:
+  zookeeper:
+    image: bitnami/zookeeper:3.9
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: bitnami/kafka:3.6
+    depends_on:
+      - zookeeper
+    environment:
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+    ports:
+      - "9092:9092"
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: orders
+    ports:
+      - "5432:5432"
+
+  api-gateway:
+    build: ./services/api-gateway
+    environment:
+      ORDER_SERVICE_URL: http://order-service:8000
+    ports:
+      - "8001:8000"
+    depends_on:
+      - order-service
+
+  order-service:
+    build: ./services/order-service
+    environment:
+      DATABASE_URL: postgres://app:app@postgres:5432/orders
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      ORDER_EVENTS_TOPIC: order-events
+    ports:
+      - "8002:8000"
+    depends_on:
+      - postgres
+      - kafka
+
+  notification-service:
+    build: ./services/notification-service
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      ORDER_EVENTS_TOPIC: order-events
+    ports:
+      - "8003:8000"
+    depends_on:
+      - kafka
+
+  analytics-service:
+    build: ./services/analytics-service
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      ORDER_EVENTS_TOPIC: order-events
+    ports:
+      - "8004:8000"
+    depends_on:
+      - kafka
+
