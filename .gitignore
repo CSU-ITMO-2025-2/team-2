@@ -252,3 +252,4 @@ ModelManifest.xml
 # FAKE - F# Make
 .fake/
 venv/
+services/api-gateway/app/__pycache__/
