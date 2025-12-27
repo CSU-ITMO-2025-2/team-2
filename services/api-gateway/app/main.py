@@ -1,3 +1,4 @@
+import asyncio
 import os
 from typing import Dict, Optional
 
@@ -28,23 +29,41 @@ app = FastAPI(title="API Gateway", version="0.1.0")
 _local_cache: Dict[str, OrderStatus] = {}
 
 
+async def _make_request_with_retry(method: str, url: str, max_retries: int = 3, **kwargs) -> httpx.Response:
+    """Make HTTP request with retry logic."""
+    for attempt in range(max_retries):
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                if method.upper() == "GET":
+                    resp = await client.get(url, **kwargs)
+                elif method.upper() == "POST":
+                    resp = await client.post(url, **kwargs)
+                else:
+                    raise ValueError(f"Unsupported method: {method}")
+                return resp
+        except (httpx.ConnectTimeout, httpx.ConnectError) as e:
+            if attempt < max_retries - 1:
+                await asyncio.sleep(1.0 * (attempt + 1))
+            else:
+                raise HTTPException(status_code=503, detail=f"Service unavailable: {str(e)}")
+    raise HTTPException(status_code=503, detail="Service unavailable after retries")
+
+
 async def create_order_via_http(order: OrderCreate) -> OrderStatus:
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(f"{ORDER_SERVICE_URL}/orders", json=order.model_dump())
-        if resp.status_code != 200:
-            raise HTTPException(status_code=resp.status_code, detail=resp.text)
-        data = resp.json()
-        return OrderStatus(**data)
+    resp = await _make_request_with_retry("POST", f"{ORDER_SERVICE_URL}/orders", json=order.model_dump())
+    if resp.status_code != 200:
+        raise HTTPException(status_code=resp.status_code, detail=resp.text)
+    data = resp.json()
+    return OrderStatus(**data)
 
 
 async def fetch_order_status(order_id: str) -> Optional[OrderStatus]:
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(f"{ORDER_SERVICE_URL}/orders/{order_id}")
-        if resp.status_code == 404:
-            return None
-        if resp.status_code != 200:
-            raise HTTPException(status_code=resp.status_code, detail=resp.text)
-        return OrderStatus(**resp.json())
+    resp = await _make_request_with_retry("GET", f"{ORDER_SERVICE_URL}/orders/{order_id}")
+    if resp.status_code == 404:
+        return None
+    if resp.status_code != 200:
+        raise HTTPException(status_code=resp.status_code, detail=resp.text)
+    return OrderStatus(**resp.json())
 
 
 @app.post("/orders", response_model=OrderStatus)

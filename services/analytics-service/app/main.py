@@ -78,9 +78,31 @@ async def health():
     }
 
 
+async def _wait_for_kafka(max_retries: int = 30, delay: float = 2.0):
+    """Wait for Kafka to be ready with retries."""
+    for attempt in range(max_retries):
+        try:
+            consumer = AIOKafkaConsumer(
+                ORDER_EVENTS_TOPIC,
+                bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+                enable_auto_commit=True,
+                auto_offset_reset="earliest",
+            )
+            await consumer.start()
+            await consumer.stop()
+            return True
+        except Exception as e:
+            if attempt < max_retries - 1:
+                await asyncio.sleep(delay)
+            else:
+                raise e
+    return False
+
+
 @app.on_event("startup")
 async def startup_event():
     global _consumer, _consumer_task
+    await _wait_for_kafka()
     _consumer = AIOKafkaConsumer(
         ORDER_EVENTS_TOPIC,
         bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,

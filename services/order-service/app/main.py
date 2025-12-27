@@ -96,10 +96,27 @@ async def health():
     }
 
 
+async def _wait_for_kafka(max_retries: int = 30, delay: float = 2.0):
+    """Wait for Kafka to be ready with retries."""
+    for attempt in range(max_retries):
+        try:
+            producer = AIOKafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
+            await producer.start()
+            await producer.stop()
+            return True
+        except Exception as e:
+            if attempt < max_retries - 1:
+                await asyncio.sleep(delay)
+            else:
+                raise e
+    return False
+
+
 @app.on_event("startup")
 async def startup_event():
     global _producer
     await db.init_db()
+    await _wait_for_kafka()
     _producer = AIOKafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
     await _producer.start()
 

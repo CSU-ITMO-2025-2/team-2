@@ -26,7 +26,7 @@ orders_table = Table(
     Column("updated_at", DateTime(timezone=True), nullable=False),
 )
 
-engine: AsyncEngine = create_async_engine(DATABASE_URL, echo=False, future=True)
+engine: AsyncEngine = create_async_engine(DATABASE_URL, echo=False)
 SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 
