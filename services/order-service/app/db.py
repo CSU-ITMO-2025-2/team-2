@@ -1,4 +1,5 @@
 import os
+import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -32,6 +33,21 @@ SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 def utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+async def wait_for_db(max_retries: int = 30, delay: float = 2.0):
+    """Wait for database to be ready with retries."""
+    for attempt in range(max_retries):
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text("SELECT 1"))
+            return True
+        except Exception as e:
+            if attempt < max_retries - 1:
+                await asyncio.sleep(delay)
+            else:
+                raise e
+    return False
 
 
 async def run_migrations():

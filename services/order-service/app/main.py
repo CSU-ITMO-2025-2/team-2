@@ -115,6 +115,7 @@ async def _wait_for_kafka(max_retries: int = 30, delay: float = 2.0):
 @app.on_event("startup")
 async def startup_event():
     global _producer
+    await db.wait_for_db()
     await db.init_db()
     await _wait_for_kafka()
     _producer = AIOKafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
