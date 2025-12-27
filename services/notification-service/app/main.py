@@ -51,13 +51,17 @@ async def send_notification(req: NotificationRequest) -> NotificationRecord:
     return record
 
 
+@app.get("/notifications", response_model=Dict[str, NotificationRecord])
+async def get_notifications() -> Dict[str, NotificationRecord]:
+    records = _notifications
+    return records
+
 @app.get("/notifications/{notification_id}", response_model=NotificationRecord)
 async def get_notification(notification_id: str) -> NotificationRecord:
     record = _notifications.get(notification_id)
     if not record:
         raise HTTPException(status_code=404, detail="Notification not found")
     return record
-
 
 @app.get("/health")
 async def health():
