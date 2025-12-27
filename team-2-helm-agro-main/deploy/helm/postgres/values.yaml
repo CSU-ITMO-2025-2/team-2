@@ -1,0 +1,65 @@
+replicaCount: 1
+
+image:
+  repository: postgres
+  pullPolicy: IfNotPresent
+  tag: "15"
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: false
+
+service:
+  type: ClusterIP
+  port: 5432
+  targetPort: 5432
+
+persistence:
+  enabled: true
+  size: 10Gi
+  storageClass: ""
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+# Database configuration
+database:
+  name: orders
+  user: app
+  password: app  # In production, use Secret
+
+env: {}
+
+livenessProbe:
+  exec:
+    command:
+      - pg_isready
+      - -U
+      - app
+      - -d
+      - orders
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  exec:
+    command:
+      - pg_isready
+      - -U
+      - app
+      - -d
+      - orders
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+

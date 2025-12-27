@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -9,7 +10,7 @@ from pydantic import BaseModel
 
 
 # JWT Configuration
-SECRET_KEY = "your-secret-key-change-this-in-production"  # TODO: Move to env var
+SECRET_KEY = os.getenv("JWT_SECRET", "your-secret-key-change-this-in-production")  # Fallback for local dev
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 

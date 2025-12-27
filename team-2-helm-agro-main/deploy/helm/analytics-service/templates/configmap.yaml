@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "analytics-service.fullname" . }}-config
+  labels:
+    {{- include "analytics-service.labels" . | nindent 4 }}
+data:
+  KAFKA_BOOTSTRAP_SERVERS: {{ .Values.kafka.bootstrapServers | quote }}
+  ORDER_EVENTS_TOPIC: {{ .Values.kafka.orderEventsTopic | quote }}
+

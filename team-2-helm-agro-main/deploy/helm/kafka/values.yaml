@@ -1,0 +1,30 @@
+zookeeper:
+  replicaCount: 1
+  image:
+    repository: confluentinc/cp-zookeeper
+    tag: "7.3.2"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+kafka:
+  replicaCount: 1
+  image:
+    repository: confluentinc/cp-kafka
+    tag: "7.3.2"
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+
