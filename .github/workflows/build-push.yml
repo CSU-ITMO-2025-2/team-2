@@ -26,7 +26,7 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
 
     strategy:
@@ -85,3 +85,45 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Update Helm values in team-2-helm-agro
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          HELM_REPO_TOKEN: ${{ secrets.HELM_REPO_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          # Установка yq для работы с YAML
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+          
+          # Клонирование репозитория с Helm charts
+          git clone https://x-access-token:${HELM_REPO_TOKEN}@github.com/CSU-ITMO-2025-2/team-2-helm-agro.git helm-repo
+          cd helm-repo
+          
+          # Настройка git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Определяем тег образа (используем latest для main ветки)
+          IMAGE_TAG="latest"
+          
+          # Обновление image.tag в values.yaml
+          VALUES_FILE="deploy/helm/${{ matrix.service }}/values.yaml"
+          if [ -f "$VALUES_FILE" ]; then
+            # Сохраняем текущий tag
+            CURRENT_TAG=$(yq eval '.image.tag' "$VALUES_FILE")
+            
+            # Обновляем tag только если он изменился
+            if [ "$CURRENT_TAG" != "$IMAGE_TAG" ]; then
+              yq eval ".image.tag = \"$IMAGE_TAG\"" -i "$VALUES_FILE"
+              
+              # Коммит и пуш изменений
+              git add "$VALUES_FILE"
+              git commit -m "chore: update ${{ matrix.service }} image tag to $IMAGE_TAG [skip ci]"
+              git push origin main || git push origin master || true
+              echo "✅ Updated ${{ matrix.service }} image tag from $CURRENT_TAG to $IMAGE_TAG"
+            else
+              echo "ℹ️  ${{ matrix.service }} already uses tag $IMAGE_TAG, no update needed"
+            fi
+          else
+            echo "⚠️  Warning: $VALUES_FILE not found"
+          fi

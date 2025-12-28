@@ -61,6 +61,7 @@ services:
     build: ./services/api-gateway
     environment:
       ORDER_SERVICE_URL: http://order-service:8000
+      JWT_SECRET: c222b01d8b735ca58e22cd54d8794725718d8b29069ed6448a027777680d0775
     ports:
       - "8001:8000"
     depends_on:
@@ -108,4 +109,3 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
-
